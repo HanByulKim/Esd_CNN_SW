@@ -67,31 +67,32 @@ void max_pool(w_t *image,																// input image
 		//FIXME
 		// tips
 		pair<int32_t, int32_t> lt=make_pair(0,0);
-		pair<int32_t, int32_t> rt=make_pair(max_pool_size-1,0);
-		pair<int32_t, int32_t> lb=make_pair(0,max_pool_size-1);
-		pair<int32_t, int32_t> rb=make_pair(max_pool_size-1,max_pool_size-1);
+		pair<int32_t, int32_t> rt=make_pair(max_pool_size.x-1,0);
+		pair<int32_t, int32_t> lb=make_pair(0,max_pool_size.y-1);
+		pair<int32_t, int32_t> rb=make_pair(max_pool_size.x-1,max_pool_size.y-1);
+		int32_t temp_m;
 
 		// Fit to output image
 		for(int i=0; i<(image_size.x-max_pool_size.x)/stride+1; i++){
 			for(int j=0; j<(image_size.y-max_pool_size.y)/stride+1; j++){
+				temp_m = 0;
 				// iteration inside filter
 				for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
 					for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
-						if(lt_i>=0 && lt_j>=0){
-							feature_map[i][j]+=filter[lt_i-lt.x][lt_j-lt.y]*image[lt_i][lt_j];
-						}
+						if(temp_m<image[lt_i][lt_j])
+							temp_m=image[lt_i][lt_j];
 					}
 				}
-
+				max_pool[i][j]=temp_m;
 				// update tips
-				pair<int32_t, int32_t> temp_f=make_pair(max_pool_size,0);
+				pair<int32_t, int32_t> temp_f=make_pair(max_pool_size.x,0);
 				lt=lt+temp_f;
 				rt=rt+temp_f;
 				lb=lb+temp_f;
 				rb=rb+temp_f;
 			}
 			// update tips
-			pair<int32_t, int32_t> temp=make_pair(0,max_pool_size);
+			pair<int32_t, int32_t> temp=make_pair(0,max_pool_size.y);
 			lt.x=0; lb.x=0;
 			rt.x=filter_size.x-1; rb.x=filter_size.x-1;
 			lt=lt+temp;
