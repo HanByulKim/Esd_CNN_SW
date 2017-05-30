@@ -20,6 +20,42 @@ void conv(w_t *image,                           // input image
           int32_t pad,                          // number of padding
           uint32_t stride) {                    // number of stride
 		//FIXME
+
+		// tips
+		pair<int32_t, int32_t> lt=make_pair((-1)*pad,(-1)*pad);
+		pair<int32_t, int32_t> rt=make_pair((-1)*pad,0);
+		pair<int32_t, int32_t> lb=make_pair(0,(-1)*pad);
+		pair<int32_t, int32_t> rb=make_pair(0,0);
+		
+		// filter 5개였따..
+		// Fit to output image
+		for(int i=0; i<(image_size.x+(2*pad)-filter_size.x)/stride+1; i++){
+			for(int j=0; j<(image_size.y+(2*pad)-filter_size.y)/stride+1; j++){
+				// iteration inside filter
+				for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
+					for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
+						if(lt_i>=0 && lt_j>=0){
+							feature_map[i][j]+=filter[lt_i-lt.x][lt_j-lt.y]*image[lt_i][lt_j];
+						}
+					}
+				}
+
+				// update tips
+				pair<int32_t, int32_t> temp_f=make_pair(stride,0);
+				lt=lt+temp_f;
+				rt=rt+temp_f;
+				lb=lb+temp_f;
+				rb=rb+temp_f;
+			}
+			// update tips
+			pair<int32_t, int32_t> temp=make_pair(0,stride);
+			lt.x=0; lb.x=0;
+			rt.x=filter_size.x-1; rb.x=filter_size.x-1;
+			lt=lt+temp;
+			rt=rt+temp;
+			lb=lb+temp;
+			rb=rb+temp;
+		}
 }
 
 void max_pool(w_t *image,																// input image
@@ -29,6 +65,41 @@ void max_pool(w_t *image,																// input image
 							uint32_t stride,													// strdie
 							w_t *max_pool) {													// output image
 		//FIXME
+		// tips
+		pair<int32_t, int32_t> lt=make_pair(0,0);
+		pair<int32_t, int32_t> rt=make_pair(max_pool_size-1,0);
+		pair<int32_t, int32_t> lb=make_pair(0,max_pool_size-1);
+		pair<int32_t, int32_t> rb=make_pair(max_pool_size-1,max_pool_size-1);
+
+		// Fit to output image
+		for(int i=0; i<(image_size.x-max_pool_size.x)/stride+1; i++){
+			for(int j=0; j<(image_size.y-max_pool_size.y)/stride+1; j++){
+				// iteration inside filter
+				for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
+					for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
+						if(lt_i>=0 && lt_j>=0){
+							feature_map[i][j]+=filter[lt_i-lt.x][lt_j-lt.y]*image[lt_i][lt_j];
+						}
+					}
+				}
+
+				// update tips
+				pair<int32_t, int32_t> temp_f=make_pair(max_pool_size,0);
+				lt=lt+temp_f;
+				rt=rt+temp_f;
+				lb=lb+temp_f;
+				rb=rb+temp_f;
+			}
+			// update tips
+			pair<int32_t, int32_t> temp=make_pair(0,max_pool_size);
+			lt.x=0; lb.x=0;
+			rt.x=filter_size.x-1; rb.x=filter_size.x-1;
+			lt=lt+temp;
+			rt=rt+temp;
+			lb=lb+temp;
+			rb=rb+temp;
+		}
+
 }
 
 void ReLu(w_t *image,
