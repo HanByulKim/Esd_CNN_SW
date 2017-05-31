@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <math.h>
+#include <math.h> //tanh
 
 #include "cnn.h"	
 #include "config.h"
@@ -11,16 +11,16 @@
 using namespace std;
 w_t test_image[1000][1 * 28 * 28];
 
-void conv(w_t *image,                           // input image
-          pair<uint32_t, uint32_t> image_size,  // input image size
-          uint32_t num_features,                // number of features in input = channel
-          w_t *filter,                          // convolution filter source
-          w_t *bias,                            // convolution bias source
-          uint32_t num_filters,                 // number of output 
-          w_t *feature_map,                     // output image
-          pair<uint32_t, uint32_t> filter_size, // filter size
-          int32_t pad,                          // number of padding
-          uint32_t stride) {                    // number of stride
+void conv(w_t *image,                           // max_pool1(12*12*5) input image
+          pair<uint32_t, uint32_t> image_size,  // 12 12 input image size 12 12
+          uint32_t num_features,                // 5 number of features in input = channel
+          w_t *filter,                          // _weights_conv2 convolution filter source
+          w_t *bias,                            // _bias_conv2 convolution bias source
+          uint32_t num_filters,                 // 5 number of output 
+          w_t *feature_map,                     // feature_map2(8*8*5) output image
+          pair<uint32_t, uint32_t> filter_size, // 5 5 filter size
+          int32_t pad,                          // 0 number of padding
+          uint32_t stride) {                    // 1 number of stride
 		//FIXME
 
 		// tips
@@ -31,32 +31,36 @@ void conv(w_t *image,                           // input image
 		
 		// filter 5개였따..
 		// Fit to output image
-		for(int i=0; i<(image_size.x+(2*pad)-filter_size.x)/stride+1; i++){
-			for(int j=0; j<(image_size.y+(2*pad)-filter_size.y)/stride+1; j++){
-				// iteration inside filter
-				for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
-					for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
-						if(lt_i>=0 && lt_j>=0){
-							feature_map[i][j]+=filter[lt_i-lt.x][lt_j-lt.y]*image[lt_i][lt_j];
+		pair<uint32_t, uint32_t> feature_size = make_pair((image_size.x+(2*pad)-filter_size.x)/stride+1,image_size.y+(2*pad)-filter_size.y)/stride+1);
+
+		for(int ch=0; ch<num_filters; ch++){ //*12 *12 or *8 *8
+			for(int i=0; i<feature_size.x; i++){ //8
+				for(int j=0; j<feature_size.y; j++){ //8
+					// iteration inside filter
+					for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
+						for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
+							if(lt_i>=0 && lt_j>=0){
+								feature_map[feature_size.y*i+j]+=filter[filter_size.y*(lt_i-lt.x)+(lt_j-lt.y)]*image[image_size.y*lt_i+lt_j];
+							}
 						}
 					}
-				}
 
-				// update tips
-				pair<int32_t, int32_t> temp_f=make_pair(stride,0);
-				lt=lt+temp_f;
-				rt=rt+temp_f;
-				lb=lb+temp_f;
-				rb=rb+temp_f;
+					// update tips(think as 2d)
+					pair<int32_t, int32_t> temp_f=make_pair(stride,0);
+					lt=lt+temp_f;
+					rt=rt+temp_f;
+					lb=lb+temp_f;
+					rb=rb+temp_f;
+				}
+				// update tips(think as 2d)
+				pair<int32_t, int32_t> temp=make_pair(0,stride);
+				lt.x=0; lb.x=0;
+				rt.x=filter_size.x-1; rb.x=filter_size.x-1;
+				lt=lt+temp;
+				rt=rt+temp;
+				lb=lb+temp;
+				rb=rb+temp;
 			}
-			// update tips
-			pair<int32_t, int32_t> temp=make_pair(0,stride);
-			lt.x=0; lb.x=0;
-			rt.x=filter_size.x-1; rb.x=filter_size.x-1;
-			lt=lt+temp;
-			rt=rt+temp;
-			lb=lb+temp;
-			rb=rb+temp;
 		}
 }
 
@@ -126,15 +130,31 @@ void TanH(w_t *image, 															// input image
 				uint32_t num_output,												// number of output feature
 				w_t *output){																// output
 		//FIXME
+		for(int i=0; i<image_size.x-1; i++){
+			for(int j=0; j<image_size.y-1; j++){
+				output[i][j] = tanh(image[i][j]);
+			}
+		}
 }
 
-void ip(w_t *input, pair<uint32_t, uint32_t> input_size,			// input image
-				uint32_t num_features,																// number of 1 input's features
-				w_t *weight,																					// weights
+void ip(w_t *input, pair<uint32_t, uint32_t> input_size, //4 4			// input image
+				uint32_t num_features,			// 5													// number of 1 input's features
+				w_t *weight,																				// weights
 				w_t *bias,																						// bias
 				uint32_t num_output,																	// number of output neurons
-				w_t *output){																					// output
-		//FIXME
+				w_t *output){	
+																									// output
+		//FIXME 
+		// tips
+		
+		// Fit to output image
+		for(int i=0; i<input_size.x-1; i++){
+			for(int j=0; j<input_size.y-1; j++){
+				weight[i][j]*input[i][j]+bias[i][j];
+			}
+		}
+
+
 }
 
 /*
