@@ -6,6 +6,8 @@
 #include "cnn.h"	
 #include "config.h"
 
+#define INFINITY
+
 using namespace std;
 w_t test_image[1000][1 * 28 * 28];
 
@@ -75,7 +77,7 @@ void max_pool(w_t *image,																// input image
 		// Fit to output image
 		for(int i=0; i<(image_size.x-max_pool_size.x)/stride+1; i++){
 			for(int j=0; j<(image_size.y-max_pool_size.y)/stride+1; j++){
-				temp_m = 0;
+				temp_m = (-1)*INFINITY;
 				// iteration inside filter
 				for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
 					for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
@@ -107,7 +109,16 @@ void ReLu(w_t *image,
 				pair<uint32_t, uint32_t> image_size,
 				uint32_t num_output,												
 				w_t *output) {
-		//FIXME
+		//FIXME		//FIXME
+		// tips
+
+		// Fit to output image
+		for(int i=0; i<image_size.x-1; i++){
+			for(int j=0; j<image_size.y-1; j++){
+				if(image[i][j] > 0) output[i][j] = image[i][j];
+				else output[i][j]=0;
+			}
+		}
 }
 
 void TanH(w_t *image, 															// input image
