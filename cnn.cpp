@@ -29,37 +29,49 @@ void conv(w_t *image,                           // max_pool1(12*12*5) input imag
 		pair<int32_t, int32_t> lb=make_pair(0,(-1)*pad);
 		pair<int32_t, int32_t> rb=make_pair(0,0);
 		
-		// filter 5개였따..
-		// Fit to output image
 		pair<uint32_t, uint32_t> feature_size = make_pair((image_size.x+(2*pad)-filter_size.x)/stride+1,image_size.y+(2*pad)-filter_size.y)/stride+1);
 
-		for(int ch=0; ch<num_filters; ch++){ //*12 *12 or *8 *8
-			for(int i=0; i<feature_size.x; i++){ //8
-				for(int j=0; j<feature_size.y; j++){ //8
-					// iteration inside filter
-					for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
-						for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
-							if(lt_i>=0 && lt_j>=0){
-								feature_map[feature_size.y*i+j]+=filter[filter_size.y*(lt_i-lt.x)+(lt_j-lt.y)]*image[image_size.y*lt_i+lt_j];
+
+		// Fit to output image
+
+		for(int ch=0; ch<num_features; ch++){ //*12 *12 or *8 *8
+			uint32_t channel = ch*feature_size.x*feature_size.y;
+			for(int filt=0; filt<num_filters; filt++){
+				uint32_t filter = filt*filter_size.x*filter_size.y;
+				for(int i=0; i<feature_size.x; i++){ //8
+					for(int j=0; j<feature_size.y; j++){ //8
+						// iteration inside filter
+						for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
+							for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
+								if(lt_i>=0 && lt_j>=0){
+									feature_map[channel+feature_size.y*i+j]+=filter[filter+filter_size.y*(lt_i-lt.x)+(lt_j-lt.y)]*image[image_size.y*lt_i+lt_j];
+								}
 							}
 						}
-					}
 
+						// update tips(think as 2d)
+						pair<int32_t, int32_t> temp_f=make_pair(stride,0);
+						lt=lt+temp_f;
+						rt=rt+temp_f;
+						lb=lb+temp_f;
+						rb=rb+temp_f;
+					}
 					// update tips(think as 2d)
-					pair<int32_t, int32_t> temp_f=make_pair(stride,0);
-					lt=lt+temp_f;
-					rt=rt+temp_f;
-					lb=lb+temp_f;
-					rb=rb+temp_f;
+					pair<int32_t, int32_t> temp=make_pair(0,stride);
+					lt.x=0; lb.x=0;
+					rt.x=filter_size.x-1; rb.x=filter_size.x-1;
+					lt=lt+temp;
+					rt=rt+temp;
+					lb=lb+temp;
+					rb=rb+temp;
 				}
-				// update tips(think as 2d)
-				pair<int32_t, int32_t> temp=make_pair(0,stride);
-				lt.x=0; lb.x=0;
-				rt.x=filter_size.x-1; rb.x=filter_size.x-1;
-				lt=lt+temp;
-				rt=rt+temp;
-				lb=lb+temp;
-				rb=rb+temp;
+			}
+		}
+
+		//bias
+		for(int i=0; i<feature_size.x; i++){ //8
+			for(int j=0; j<feature_size.y; j++){ //8
+				feature_map[feature_size.y*i+j]+=bias[feature_size.y*i+j];
 			}
 		}
 }
