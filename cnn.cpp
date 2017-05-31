@@ -35,7 +35,8 @@ void conv(w_t *image,                           // max_pool1(12*12*5) input imag
 		// Fit to output image
 
 		for(int ch=0; ch<num_features; ch++){ //*12 *12 or *8 *8
-			uint32_t channel = ch*feature_size.x*feature_size.y;
+			uint32_t ch_fea = ch*feature_size.x*feature_size.y;
+			uint32_t ch_img = ch*image_size.x*image_size.y;
 			for(int filt=0; filt<num_filters; filt++){
 				uint32_t filter = filt*filter_size.x*filter_size.y;
 				for(int i=0; i<feature_size.x; i++){ //8
@@ -44,7 +45,7 @@ void conv(w_t *image,                           // max_pool1(12*12*5) input imag
 						for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
 							for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
 								if(lt_i>=0 && lt_j>=0){
-									feature_map[channel+feature_size.y*i+j]+=filter[filter+filter_size.y*(lt_i-lt.x)+(lt_j-lt.y)]*image[image_size.y*lt_i+lt_j];
+									feature_map[ch_fea+feature_size.y*i+j]+=filter[filter+filter_size.y*(lt_i-lt.x)+(lt_j-lt.y)]*image[ch_img+image_size.y*lt_i+lt_j];
 								}
 							}
 						}
@@ -90,33 +91,38 @@ void max_pool(w_t *image,																// input image
 		pair<int32_t, int32_t> rb=make_pair(max_pool_size.x-1,max_pool_size.y-1);
 		int32_t temp_m;
 
+		pair<uint32_t, uint32_t> feature_size = make_pair((image_size.x+(2*pad)-max_pool_size.x)/stride+1,image_size.y+(2*pad)-max_pool_size.y)/stride+1);
+
 		// Fit to output image
-		for(int i=0; i<(image_size.x-max_pool_size.x)/stride+1; i++){
-			for(int j=0; j<(image_size.y-max_pool_size.y)/stride+1; j++){
-				temp_m = (-1)*INFINITY;
-				// iteration inside filter
-				for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
-					for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
-						if(temp_m<image[lt_i][lt_j])
-							temp_m=image[lt_i][lt_j];
+		for(int ch=0; ch<channel; ch++){ //*12 *12 or *8 *8
+			uint32_t ch_all = ch*feature_size.x*feature_size.y;
+			for(int i=0; i<(image_size.x-max_pool_size.x)/stride+1; i++){
+				for(int j=0; j<(image_size.y-max_pool_size.y)/stride+1; j++){
+					temp_m = (-1)*INFINITY;
+					// iteration inside filter
+					for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
+						for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
+							if(temp_m<image[image_size.y*lt_i+lt_j])
+								temp_m=image[image_size.y*lt_i+lt_j];
+						}
 					}
+					max_pool[feature_size.y*i+j]=temp_m;
+					// update tips
+					pair<int32_t, int32_t> temp_f=make_pair(max_pool_size.x,0);
+					lt=lt+temp_f;
+					rt=rt+temp_f;
+					lb=lb+temp_f;
+					rb=rb+temp_f;
 				}
-				max_pool[i][j]=temp_m;
 				// update tips
-				pair<int32_t, int32_t> temp_f=make_pair(max_pool_size.x,0);
-				lt=lt+temp_f;
-				rt=rt+temp_f;
-				lb=lb+temp_f;
-				rb=rb+temp_f;
+				pair<int32_t, int32_t> temp=make_pair(0,max_pool_size.y);
+				lt.x=0; lb.x=0;
+				rt.x=filter_size.x-1; rb.x=filter_size.x-1;
+				lt=lt+temp;
+				rt=rt+temp;
+				lb=lb+temp;
+				rb=rb+temp;
 			}
-			// update tips
-			pair<int32_t, int32_t> temp=make_pair(0,max_pool_size.y);
-			lt.x=0; lb.x=0;
-			rt.x=filter_size.x-1; rb.x=filter_size.x-1;
-			lt=lt+temp;
-			rt=rt+temp;
-			lb=lb+temp;
-			rb=rb+temp;
 		}
 
 }
@@ -129,10 +135,14 @@ void ReLu(w_t *image,
 		// tips
 
 		// Fit to output image
-		for(int i=0; i<image_size.x-1; i++){
-			for(int j=0; j<image_size.y-1; j++){
-				if(image[i][j] > 0) output[i][j] = image[i][j];
-				else output[i][j]=0;
+		
+		for(int ch=0; ch<num_output; ch++){
+			uint32_t ch_all=num_output*image_size.x*image_size.y;
+			for(int i=0; i<image_size.x-1; i++){
+				for(int j=0; j<image_size.y-1; j++){
+					if(image[ch_all+image_size.y*i+j] > 0) output[ch_all+image_size.y*i+j] = image[ch_all+image_size.y*i+j];
+					else output[ch_all+image_size.y*i+j]=0;
+				}
 			}
 		}
 }
@@ -142,9 +152,12 @@ void TanH(w_t *image, 															// input image
 				uint32_t num_output,												// number of output feature
 				w_t *output){																// output
 		//FIXME
-		for(int i=0; i<image_size.x-1; i++){
-			for(int j=0; j<image_size.y-1; j++){
-				output[i][j] = tanh(image[i][j]);
+		for(int ch=0; ch<num_output; ch++){
+			uint32_t ch_all=num_output*image_size.x*image_size.y;
+			for(int i=0; i<image_size.x-1; i++){
+				for(int j=0; j<image_size.y-1; j++){
+					output[ch_all+image_size.y*i+j] = tanh(image[ch_all+image_size.y*i+j]);
+				}
 			}
 		}
 }
