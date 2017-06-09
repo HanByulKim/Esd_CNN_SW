@@ -13,10 +13,11 @@
 #include "./data/bias_ip2.h"
 #include "./data/test_set.h"
 #include "./data/label.h"
-
+	
 using namespace std;
 
 int main() {
+	int acc=0;
 		for (uint32_t iter = 0; iter < 1000; ++iter){
 				for (uint32_t i =0 ; i < 784; ++i){
 						test_image[iter][i] = ts[784 * iter + i];
@@ -53,9 +54,10 @@ int main() {
 								_weights_ip2,
 								_bias_ip2,
 								10, ip2);
-				
-				//accuracy(iter, ls, ip2);
-		}
 
+				acc+=accuracy(iter, ls, ip2);
+		}
+		std::cout<<(float)acc/1000;
+		system("pause");
 		return 0;
 }

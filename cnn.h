@@ -42,9 +42,7 @@ void ip(w_t *input, std::pair<uint32_t, uint32_t> input_size,
 				uint32_t num_output,
 				w_t *output);
 
-/*
-void accuracy(uint32_t iter,
+int accuracy(uint32_t iter,
 							uint32_t *label,
 							w_t *output);
-*/
 #endif

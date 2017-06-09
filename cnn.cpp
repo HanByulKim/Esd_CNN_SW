@@ -6,7 +6,7 @@
 #include "cnn.h"	
 #include "config.h"
 
-#define INFINITY
+
 
 using namespace std;
 w_t test_image[1000][1 * 28 * 28];
@@ -21,58 +21,31 @@ void conv(w_t *image,                           // max_pool1(12*12*5) input imag
           pair<uint32_t, uint32_t> filter_size, // 5 5 filter size
           int32_t pad,                          // 0 number of padding
           uint32_t stride) {                    // 1 number of stride
-		//FIXME
 
-		// tips
-		pair<int32_t, int32_t> lt=make_pair((-1)*pad,(-1)*pad);
-		pair<int32_t, int32_t> rt=make_pair((-1)*pad,0);
-		pair<int32_t, int32_t> lb=make_pair(0,(-1)*pad);
-		pair<int32_t, int32_t> rb=make_pair(0,0);
 		
-		pair<uint32_t, uint32_t> feature_size = make_pair((image_size.x+(2*pad)-filter_size.x)/stride+1,image_size.y+(2*pad)-filter_size.y)/stride+1);
+		pair<uint32_t, uint32_t> feature_size = make_pair((image_size.first+(2*pad)-filter_size.first)/stride+1,(image_size.second+(2*pad)-filter_size.second)/stride+1);
 
 
-		// Fit to output image
-
-		for(int ch=0; ch<num_features; ch++){ //*12 *12 or *8 *8
-			uint32_t ch_fea = ch*feature_size.x*feature_size.y;
-			uint32_t ch_img = ch*image_size.x*image_size.y;
-			for(int filt=0; filt<num_filters; filt++){
-				uint32_t filter = filt*filter_size.x*filter_size.y;
-				for(int i=0; i<feature_size.x; i++){ //8
-					for(int j=0; j<feature_size.y; j++){ //8
-						// iteration inside filter
-						for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
-							for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
-								if(lt_i>=0 && lt_j>=0){
-									feature_map[ch_fea+feature_size.y*i+j]+=filter[filter+filter_size.y*(lt_i-lt.x)+(lt_j-lt.y)]*image[ch_img+image_size.y*lt_i+lt_j];
-								}
-							}
-						}
-
-						// update tips(think as 2d)
-						pair<int32_t, int32_t> temp_f=make_pair(stride,0);
-						lt=lt+temp_f;
-						rt=rt+temp_f;
-						lb=lb+temp_f;
-						rb=rb+temp_f;
-					}
-					// update tips(think as 2d)
-					pair<int32_t, int32_t> temp=make_pair(0,stride);
-					lt.x=0; lb.x=0;
-					rt.x=filter_size.x-1; rb.x=filter_size.x-1;
-					lt=lt+temp;
-					rt=rt+temp;
-					lb=lb+temp;
-					rb=rb+temp;
+		for (int filt = 0; filt < num_filters; filt++){
+			for (int i = 0; i < feature_size.second; i++){ //8
+				for (int j = 0; j < feature_size.first; j++){ //8
+					feature_map[filt*feature_size.second*feature_size.first + feature_size.first*i + j] = bias[filt];
 				}
 			}
 		}
-
-		//bias
-		for(int i=0; i<feature_size.x; i++){ //8
-			for(int j=0; j<feature_size.y; j++){ //8
-				feature_map[feature_size.y*i+j]+=bias[feature_size.y*i+j];
+		for(int filt=0; filt<num_filters; filt++){
+			for(int ch=0; ch<num_features; ch++){
+				for(int i=0; i<feature_size.second; i++){ //8
+					for(int j=0; j<feature_size.first; j++){ //8
+						for(int lt_i=0; lt_i<filter_size.second; lt_i++){ //i
+							for(int lt_j=0; lt_j<filter_size.first; lt_j++){ //j
+								if ((lt_i + i*stride - pad >= 0) || (lt_j + j*stride - pad >= 0) || (lt_i + i*stride - pad < image_size.second) || (lt_j + j*stride - pad < image_size.first)){
+									feature_map[filt*feature_size.second*feature_size.first+feature_size.first*i + j] += filter[filt*num_features*filter_size.second*filter_size.first + ch*filter_size.second*filter_size.first + lt_i*filter_size.first + lt_j] * image[ch*image_size.second*image_size.first + (lt_i + i*stride - pad)*image_size.first + (lt_j + j*stride - pad)];
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 }
@@ -81,47 +54,28 @@ void max_pool(w_t *image,																// input image
 							pair<uint32_t, uint32_t> image_size,			// input image size
 							uint32_t channel,													// number of features in input image = channel
 							pair<uint32_t, uint32_t> max_pool_size,		// pooling size
-							uint32_t stride,													// strdie
+							uint32_t stride,													// stride
 							w_t *max_pool) {													// output image
-		//FIXME
-		// tips
-		pair<int32_t, int32_t> lt=make_pair(0,0);
-		pair<int32_t, int32_t> rt=make_pair(max_pool_size.x-1,0);
-		pair<int32_t, int32_t> lb=make_pair(0,max_pool_size.y-1);
-		pair<int32_t, int32_t> rb=make_pair(max_pool_size.x-1,max_pool_size.y-1);
-		int32_t temp_m;
 
-		pair<uint32_t, uint32_t> feature_size = make_pair((image_size.x+(2*pad)-max_pool_size.x)/stride+1,image_size.y+(2*pad)-max_pool_size.y)/stride+1);
+		w_t temp_m = 0;
+
+		pair<uint32_t, uint32_t> feature_size = make_pair((image_size.first-max_pool_size.first)/stride+1,(image_size.second-max_pool_size.second)/stride+1);
 
 		// Fit to output image
 		for(int ch=0; ch<channel; ch++){ //*12 *12 or *8 *8
-			uint32_t ch_all = ch*feature_size.x*feature_size.y;
-			for(int i=0; i<(image_size.x-max_pool_size.x)/stride+1; i++){
-				for(int j=0; j<(image_size.y-max_pool_size.y)/stride+1; j++){
-					temp_m = (-1)*INFINITY;
-					// iteration inside filter
-					for(int lt_i=lt.x; lt_i<=lb.x; lt_i++){ //i
-						for(int lt_j=lt.y; lt_j<=rt.y; lt_j++){ //j
-							if(temp_m<image[image_size.y*lt_i+lt_j])
-								temp_m=image[image_size.y*lt_i+lt_j];
+			for(int i=0; i<feature_size.second; i++){
+				for(int j=0; j<feature_size.first; j++){
+					temp_m = image[ch*image_size.second*image_size.first + (i*stride)*image_size.first + j*stride];
+					for(int lt_i= 0; lt_i<max_pool_size.second; lt_i++){ //i
+						for(int lt_j=0; lt_j<max_pool_size.first; lt_j++){ //j
+							if (temp_m < image[ch*image_size.second*image_size.first + (i*stride + lt_i)*image_size.first + j*stride + lt_j]){
+								temp_m = image[ch*image_size.second*image_size.first + (i*stride + lt_i)*image_size.first + j*stride + lt_j];
+							}
 						}
 					}
-					max_pool[feature_size.y*i+j]=temp_m;
-					// update tips
-					pair<int32_t, int32_t> temp_f=make_pair(max_pool_size.x,0);
-					lt=lt+temp_f;
-					rt=rt+temp_f;
-					lb=lb+temp_f;
-					rb=rb+temp_f;
+					max_pool[ch*feature_size.second*feature_size.first + feature_size.first*i+j]=temp_m;
 				}
-				// update tips
-				pair<int32_t, int32_t> temp=make_pair(0,max_pool_size.y);
-				lt.x=0; lb.x=0;
-				rt.x=filter_size.x-1; rb.x=filter_size.x-1;
-				lt=lt+temp;
-				rt=rt+temp;
-				lb=lb+temp;
-				rb=rb+temp;
+
 			}
 		}
 
@@ -131,18 +85,28 @@ void ReLu(w_t *image,
 				pair<uint32_t, uint32_t> image_size,
 				uint32_t num_output,												
 				w_t *output) {
-		//FIXME		//FIXME
-		// tips
 
-		// Fit to output image
-		
+		/*
 		for(int ch=0; ch<num_output; ch++){
-			uint32_t ch_all=num_output*image_size.x*image_size.y;
-			for(int i=0; i<image_size.x-1; i++){
-				for(int j=0; j<image_size.y-1; j++){
-					if(image[ch_all+image_size.y*i+j] > 0) output[ch_all+image_size.y*i+j] = image[ch_all+image_size.y*i+j];
-					else output[ch_all+image_size.y*i+j]=0;
+			int ch_all=ch*image_size.first*image_size.second;
+			for(int i=0; i<image_size.second; i++){
+				for(int j=0; j<image_size.first; j++){
+					if(image[ch_all+image_size.first*i+j] > 0) output[ch_all+image_size.first*i+j] = image[ch_all+image_size.first*i+j];
+					else output[ch_all+image_size.first*i+j]=0;
 				}
+			}
+		}
+		*/
+
+		for (int i = 0; i < num_output*image_size.second*image_size.first; i++)
+		{
+			if (image[i] > 0)
+			{
+				output[i] = image[i];
+			}
+			else
+			{
+				output[i] = 0;
 			}
 		}
 }
@@ -151,15 +115,14 @@ void TanH(w_t *image, 															// input image
 				pair<uint32_t, uint32_t> image_size,				// input image size
 				uint32_t num_output,												// number of output feature
 				w_t *output){																// output
-		//FIXME
-		for(int ch=0; ch<num_output; ch++){
-			uint32_t ch_all=num_output*image_size.x*image_size.y;
-			for(int i=0; i<image_size.x-1; i++){
-				for(int j=0; j<image_size.y-1; j++){
-					output[ch_all+image_size.y*i+j] = tanh(image[ch_all+image_size.y*i+j]);
-				}
-			}
-		}
+	///*
+	for (int i = 0; i < image_size.first*image_size.second*num_output; i++)
+	{
+		output[i] = tanh(image[i]);
+	}
+	//*/
+	//ReLu(output, image_size, num_output, image);
+
 }
 
 void ip(w_t *input, pair<uint32_t, uint32_t> input_size, //4 4			// input image
@@ -169,23 +132,41 @@ void ip(w_t *input, pair<uint32_t, uint32_t> input_size, //4 4			// input image
 				uint32_t num_output,																	// number of output neurons
 				w_t *output){	
 																									// output
-		//FIXME 
-		// tips
-		
-		// Fit to output image
-		for(int i=0; i<input_size.x-1; i++){
-			for(int j=0; j<input_size.y-1; j++){
-				weight[i][j]*input[i][j]+bias[i][j];
-			}
+
+	for (uint32_t i = 0; i < num_output; i++)
+	{
+		output[i] = 0;
+		for (uint32_t j = 0; j < input_size.second*input_size.first*num_features; j++)
+		{
+			output[i] += weight[i*input_size.second*input_size.first*num_features + j]*input[j];
 		}
+
+	}
+	for (uint32_t i = 0; i < num_output; i++){
+		output[i] += bias[i];
+	}
+
 
 
 }
 
-/*
-void accuracy(uint32_t iter,
+
+
+int accuracy(uint32_t iter,
 							uint32_t *label,
 							w_t *output){
 		//FIXME
+		int temp=0;
+		int number = 0;
+		for(int i=0; i<10; i++){
+			if (output[i]>temp)
+			{
+				temp = output[i];
+				number = i;
+			}
+		}
+		cout << label[iter] << " " << number << endl;
+		if(label[iter]==number) return 1;
+		return 0;
 }
-*/
+
